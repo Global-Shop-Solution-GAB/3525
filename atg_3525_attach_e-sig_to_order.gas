@@ -1,0 +1,229 @@
+Program.Sub.ScreenSU.Start
+gui.F_Order_Sig..create
+gui.F_Order_Sig..caption("Sales Order Signature")
+gui.F_Order_Sig..size(4450,3850)
+gui.F_Order_Sig..position(0,0)
+gui.F_Order_Sig..event(unload,f_order_sig_unload)
+gui.F_Order_Sig..alwaysontop(False)
+gui.F_Order_Sig..fontname("Arial")
+gui.F_Order_Sig..fontsize(8)
+gui.F_Order_Sig..forecolor(0)
+gui.F_Order_Sig..fontstyle(,,,,)
+gui.F_Order_Sig..BackColor(-2147483633)
+gui.F_Order_Sig..controlbox(True)
+gui.F_Order_Sig..maxbutton(False)
+gui.F_Order_Sig..minbutton(True)
+gui.F_Order_Sig..mousepointer(0)
+gui.F_Order_Sig..moveable(True)
+gui.F_Order_Sig..sizeable(False)
+gui.F_Order_Sig..ShowInTaskBar(True)
+gui.F_Order_Sig..titlebar(True)
+gui.F_Order_Sig.lbl1.create(label,"Sales Order",True,1935,255,1,200,200,True,0,Arial,8,-2147483633,0)
+gui.F_Order_Sig.txtOrder.create(textbox,"",True,1200,300,0,200,400,True,0,Arial,8,-2147483643,1)
+gui.F_Order_Sig.txtOrder.numericonly(2)
+gui.F_Order_Sig.txtOrder.maxLength(7)
+gui.F_Order_Sig.cmdOrder.create(button)
+gui.F_Order_Sig.cmdOrder.caption("^")
+gui.F_Order_Sig.cmdOrder.visible(True)
+gui.F_Order_Sig.cmdOrder.size(300,300)
+gui.F_Order_Sig.cmdOrder.zorder(0)
+gui.F_Order_Sig.cmdOrder.position(1400,400)
+gui.F_Order_Sig.cmdOrder.enabled(True)
+gui.F_Order_Sig.cmdOrder.fontname("Arial")
+gui.F_Order_Sig.cmdOrder.fontsize(8)
+gui.F_Order_Sig.cmdOrder.event(click,cmdorder_click)
+gui.F_Order_Sig.picSig.create(picturebox)
+gui.F_Order_Sig.picSig.size(4000,2000)
+gui.F_Order_Sig.picSig.zorder(0)
+gui.F_Order_Sig.picSig.position(200,800)
+gui.F_Order_Sig.picSig.enabled(True)
+gui.F_Order_Sig.picSig.fontname("Arial")
+gui.F_Order_Sig.picSig.fontsize(8)
+gui.F_Order_Sig.picSig.BackColor(16777215)
+gui.F_Order_Sig.cmdSig.create(button)
+gui.F_Order_Sig.cmdSig.caption("Signature")
+gui.F_Order_Sig.cmdSig.visible(True)
+gui.F_Order_Sig.cmdSig.size(855,375)
+gui.F_Order_Sig.cmdSig.zorder(0)
+gui.F_Order_Sig.cmdSig.position(200,2900)
+gui.F_Order_Sig.cmdSig.enabled(True)
+gui.F_Order_Sig.cmdSig.fontname("Arial")
+gui.F_Order_Sig.cmdSig.fontsize(8)
+gui.F_Order_Sig.cmdSig.event(click,cmdsig_click)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Coded by: SMC
+'Project Start Date: 1/5/2011
+'Hooks:
+'  Custom Menu Item
+'Notes:
+'  Quote 1978 for Customer Tri-Steel Manufacturing
+'  ____________________________
+'  A new menu item will be created under Order Entry > Transactions > Attach Signature to Order.
+'
+'  This will launch a GAB program where a user selects an Order No. from a browser, then clicks "Get Signature", which will then prompt for a signature on a ePadLink Device (http://www.epadlink.com).
+'  After recieving the signature, it will be saved in Global\Plugins\Order Signatures, and auto-attached as a Document Control link to the Sales Order.
+'  Note:  This requires the Document Control System to be set up for the Global Shop environment.  This also requires an ePadLink device, as mentioned above (not included).
+'
+'  Function.Automation.ePad.CaptureSignature(FQ filename,boolen return) will be used to prompt for the signature, then saved to a jpeg in Global\Plugins\Order Signatures.
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+Gui.F_Order_Sig..Show
+V.Local.bRet.Declare(Boolean)
+
+Program.Sub.Main.End
+
+program.sub.f_order_sig_unload.start
+f.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+program.sub.f_order_sig_unload.end
+
+program.sub.cmdorder_click.start
+V.Local.sCol.Declare(String)
+V.Local.sColW.Declare(String)
+V.Local.sQuery.Declare(String)
+V.Local.sRet.Declare(String)
+
+F.Intrinsic.String.Split("Customer*!*Order No*!*Order Date*!*Due Date*!*Customer PO","*!*",V.Local.sCol)
+F.Intrinsic.String.Split("3000*!*800*!*1200*!*1200*!*1500","*!*",V.Local.sColW)
+V.Local.sQuery.Set("SELECT NAME_CUSTOMER,ORDER_NO,  DATE_ORDER, DATE_DUE, CUSTOMER_PO FROM V_ORDER_HEADER O, V_CUSTOMER_MASTER C WHERE C.CUSTOMER=O.CUSTOMER ORDER BY ORDER_NO ASC")
+
+F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+F.Intrinsic.UI.Browser("Select a Sales Order","conx",V.Local.sQuery,V.Local.sCol,V.Local.sColW,8700,5000,V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet,<>,"***CANCEL***")
+	F.Intrinsic.String.Split(V.Local.sRet,"*!*",V.Local.sRet)
+	Gui.F_Order_Sig.txtOrder.Text(V.Local.sRet(1))
+
+	F.Intrinsic.Control.CallSub(Cmdsig_click)
+F.Intrinsic.Control.EndIf
+
+
+program.sub.cmdorder_click.end
+
+program.sub.cmdsig_click.start
+V.Local.sError.Declare(String)
+V.Local.sFile.Declare(String)
+V.Local.bRet.Declare(Boolean)
+V.Local.sRet.Declare(String)
+V.Local.bGetSig.Declare(Boolean,True)
+V.Local.sPicMetrics.Declare(String)
+V.Local.Y.Declare(Long)
+V.Local.iLinkID.Declare(Long)
+V.Local.iDocID.Declare(Long)
+V.Local.bePadErr.Declare(Boolean,False)
+V.Local.sFilename.Declare(String)
+V.Local.sPath.Declare(String)
+V.Local.sQuery.Declare(String)
+V.Local.sTemp.Declare(String)
+
+F.Intrinsic.Control.SetErrorHandler("cmdsig_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+gui.F_Order_Sig.txtOrder.Text(V.Screen.F_Order_Sig!txtOrder.Text.trim)
+F.Intrinsic.Control.If(V.Screen.F_Order_Sig!txtOrder.Text,=,"")
+	F.Intrinsic.UI.Msgbox("Select a Sales Order")
+	F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.CallSub(Valid_order)
+F.Intrinsic.Control.If(V.Args.bRet,=,False)
+	F.Intrinsic.UI.Msgbox("Select valid Sales Order")
+	F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+Gui.F_Order_Sig..Enabled(False)
+
+F.Intrinsic.String.Concat(V.Caller.PluginsDir,"\Order Signatures",V.Local.sFile)
+F.Intrinsic.File.DirExists(V.Local.sFile,V.Local.bRet)
+F.Intrinsic.Control.If(V.Local.bRet,=,False)
+	F.Intrinsic.File.CreateDir(V.Local.sFile)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.String.Concat(V.Local.sFile,"\",V.Screen.F_Order_Sig!txtOrder.Text,".JPG",V.Local.sFile)
+F.Intrinsic.File.Exists(V.Local.sFile,V.Local.bRet)
+F.Intrinsic.Control.If(V.Local.bRet,=,True)
+	F.Intrinsic.UI.Msgbox("A signature file has already been created for this order.  Do you want to use this signature instead?",,3,V.Local.sRet)
+	F.Intrinsic.Control.If(V.Local.sRet,=,2)
+		Gui.F_Order_Sig..Enabled(True)
+		F.Intrinsic.Control.ExitSub
+	F.Intrinsic.Control.Elseif(V.Local.sRet,=,6)
+		V.Local.bGetSig.Set(False)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+F.Intrinsic.File.GetUNCName(V.Local.sFile,V.Local.sFile)
+
+F.Intrinsic.Control.If(V.Local.bGetSig,=,True)
+	V.Local.bePadErr.Set(True)
+	f.Automation.epad.CaptureSignature(V.Local.sFile,V.Local.bRet)
+	V.Local.bePadErr.Set(False)
+	F.Intrinsic.Control.If(V.Local.bRet,=,False)
+		F.Intrinsic.UI.Msgbox("Signature capture was unsuccessful.  Please verify it is set up correctly before trying again.")
+		Gui.F_Order_Sig..Enabled(True)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+f.Intrinsic.ui.GetImageMetrics(V.Local.sFile,V.Local.sPicMetrics)
+F.Intrinsic.String.Split(V.Local.sPicMetrics,"*!*",V.Local.sPicMetrics)
+F.Intrinsic.Math.Div(V.Screen.F_Order_Sig!picSig.Height,V.Ambient.TwipsPerPixelX,V.Local.Y)
+F.Intrinsic.Math.Sub(V.Local.Y,V.Local.sPicMetrics(1),10,V.Local.Y)
+Gui.F_Order_Sig.picSig.PaintPicture(V.Local.sFile,10,V.Local.Y)
+
+F.Global.DocumentControl.CreateReference(V.Screen.F_Order_Sig!txtOrder.Text,45,V.Local.iLinkID)
+'F.Intrinsic.Debug.InvokeDebugger
+'F.Intrinsic.Debug.Stop
+'F.Global.DocumentControl.GetDocumentID(V.Local.iLinkID,V.Local.sFile,V.Local.iDocID)
+F.Intrinsic.File.GetFileNameFromFQN(V.Local.sFile,V.Local.sFilename)
+F.Intrinsic.File.GetPathFromFQN(V.Local.sFile,V.Local.sPath)
+F.Intrinsic.String.Right(V.Local.sPath,1,V.Local.sTemp)
+F.Intrinsic.Control.If(V.Local.sTemp,<>,"\")
+	F.Intrinsic.String.Concat(V.Local.sPath,"\",V.Local.sPath)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.String.Concat("SELECT * FROM ATG_DOC_ASSOC WHERE LINK_ID=",V.Local.iLinkID," AND PATH='",V.Local.sPath,"' AND FILE='",V.Local.sFilename,"'",V.Local.sQuery)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstDoc",V.Local.sQuery)
+F.Intrinsic.Control.If(V.ODBC.conx!rstDoc.EOF,=,True)
+	F.Global.DocumentControl.AddDocument(V.Local.iLinkID,V.Local.sFile,"Order Signature",-1,)
+F.Intrinsic.Control.EndIf
+F.ODBC.conx!rstDoc.Close
+
+Gui.F_Order_Sig..Enabled(True)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdsig_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Local.bePadErr,=,False)
+		Function.Intrinsic.String.Concat("Error Occurred when capturing signature ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Error Occurred when capturing signature ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Ambient.NewLine,,V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.cmdsig_click.end
+
+Program.Sub.Valid_Order.Start
+V.Local.sQuery.Declare(String)
+V.Local.bRet.Declare(Boolean)
+
+F.Intrinsic.String.Concat("SELECT * FROM ORDER_HEADER WHERE ORDER_NO='",V.Screen.F_Order_Sig!txtOrder.Text,"'",V.Local.sQuery)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstOrder",V.Local.sQuery)
+F.Intrinsic.Control.If(V.ODBC.conx!rstOrder.EOF,<>,True)
+	V.Local.bRet.Set(True)
+F.Intrinsic.Control.Else
+	V.Local.bRet.Set(False)
+F.Intrinsic.Control.EndIf
+F.ODBC.conx!rstOrder.Close
+
+F.Intrinsic.Variable.AddRV("bRet",V.Local.bRet)
+
+Program.Sub.Valid_Order.End
+
+
